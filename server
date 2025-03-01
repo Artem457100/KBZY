@@ -1,0 +1,327 @@
+import socket
+import threading
+import json
+from datetime import datetime
+import telebot
+import schedule
+import time
+
+# Замените на ваш токен от BotFather
+TELEGRAM_TOKEN = "7482158660:AAH6PoEXpXbFwKPVn1Yyf8HG_KpurZI6PfY"
+bot = telebot.TeleBot(TELEGRAM_TOKEN)
+
+# Загрузка данных пользователей
+def load_users():
+    try:
+        with open('users_data.txt', 'r', encoding='utf-8') as f:
+            return json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError):
+        return {}
+
+# Сохранение данных пользователей
+def save_users(users):
+    with open('users_data.txt', 'w', encoding='utf-8') as f:
+        json.dump(users, f, ensure_ascii=False, indent=4)
+
+# Проверка и сброс данных в 00:00
+def reset_daily_data(users, username):
+    today = datetime.now().date().isoformat()
+    user_data = users.get(username, {})
+    last_reset = user_data.get("last_reset", "1970-01-01")
+
+    if last_reset != today:
+        user_data["meals"] = []
+        user_data["water_consumed"] = 0
+        user_data["last_reset"] = today
+        users[username] = user_data
+        save_users(users)
+
+# Расчёт потреблённых КБЖУ
+def calculate_consumed_kbzu(meals):
+    consumed = {"Калории": 0, "Белки": 0, "Жиры": 0, "Углеводы": 0}
+    for meal in meals:
+        consumed["Калории"] += meal["Калории"]
+        consumed["Белки"] += meal["Белки"]
+        consumed["Жиры"] += meal["Жиры"]
+        consumed["Углеводы"] += meal["Углеводы"]
+    return consumed
+
+# Расчёт КБЖУ
+def calculate_kbzu(weight, height, age, gender, activity_factor, goal_choice):
+    if gender.upper() == "М":
+        bmr = 10 * weight + 6.25 * height - 5 * age + 5
+    else:
+        bmr = 10 * weight + 6.25 * height - 5 * age - 161
+
+    tdee = bmr * activity_factor
+
+    if goal_choice == 1:  # Похудеть
+        calories = tdee - 500
+    elif goal_choice == 2:  # Набрать вес
+        calories = tdee + 300
+    else:  # Поддерживать вес
+        calories = tdee
+
+    protein_grams = 2 * weight
+    fat_grams = 1 * weight
+    protein_cal = protein_grams * 4
+    fat_cal = fat_grams * 9
+    carbs_cal = calories - (protein_cal + fat_cal)
+    if carbs_cal < 0:
+        carbs_cal = 0
+    carbs_grams = carbs_cal / 4
+
+    return {
+        "Калории": calories,
+        "Белки": protein_grams,
+        "Жиры": fat_grams,
+        "Углеводы": carbs_grams
+    }
+
+# Функция для отправки уведомлений о воде
+def send_water_notification():
+    users = load_users()
+    for username, data in users.items():
+        if "telegram_id" not in data or not data["telegram_id"] or not data["personal_data"]:
+            continue
+
+        reset_daily_data(users, username)
+        water_consumed = data["water_consumed"]
+        daily_goal = data["daily_goal"]
+        chat_id = data["telegram_id"]
+
+        if water_consumed < daily_goal * 0.8:
+            remaining_water = daily_goal - water_consumed
+            message = f"Напоминание о воде: Вы выпили только {int(water_consumed)} мл из {daily_goal} мл. Осталось выпить {int(remaining_water)} мл!"
+            try:
+                bot.send_message(chat_id, message)
+            except Exception as e:
+                print(f"Ошибка отправки сообщения о воде для {username}: {e}")
+
+# Функция для отправки уведомлений о еде
+def send_meal_notification():
+    users = load_users()
+    for username, data in users.items():
+        if "telegram_id" not in data or not data["telegram_id"] or not data["personal_data"]:
+            continue
+
+        reset_daily_data(users, username)
+        consumed_kbzu = calculate_consumed_kbzu(data["meals"])
+        daily_kbzu = calculate_kbzu(
+            data["personal_data"]["weight"],
+            data["personal_data"]["height"],
+            data["personal_data"]["age"],
+            data["personal_data"]["gender"],
+            data["personal_data"]["activity_factor"],
+            data["personal_data"]["goal_choice"]
+        )
+        chat_id = data["telegram_id"]
+
+        if consumed_kbzu["Калории"] < daily_kbzu["Калории"] * 0.8:
+            remaining_calories = daily_kbzu["Калории"] - consumed_kbzu["Калории"]
+            message = f"Напоминание о еде: Вы потребили только {int(consumed_kbzu['Калории'])} ккал из {int(daily_kbzu['Калории'])}. Осталось {int(remaining_calories)} ккал!"
+            try:
+                bot.send_message(chat_id, message)
+            except Exception as e:
+                print(f"Ошибка отправки сообщения о еде для {username}: {e}")
+
+# Функция для отправки комбинированных уведомлений (вода + еда в 18:00)
+def send_combined_notification():
+    users = load_users()
+    for username, data in users.items():
+        if "telegram_id" not in data or not data["telegram_id"] or not data["personal_data"]:
+            continue
+
+        reset_daily_data(users, username)
+        consumed_kbzu = calculate_consumed_kbzu(data["meals"])
+        daily_kbzu = calculate_kbzu(
+            data["personal_data"]["weight"],
+            data["personal_data"]["height"],
+            data["personal_data"]["age"],
+            data["personal_data"]["gender"],
+            data["personal_data"]["activity_factor"],
+            data["personal_data"]["goal_choice"]
+        )
+        water_consumed = data["water_consumed"]
+        daily_goal = data["daily_goal"]
+        chat_id = data["telegram_id"]
+
+        message = "Напоминание на 18:00:\n"
+        need_to_send = False
+
+        if water_consumed < daily_goal * 0.8:
+            remaining_water = daily_goal - water_consumed
+            message += f"- Вы выпили только {int(water_consumed)} мл из {daily_goal} мл. Осталось выпить {int(remaining_water)} мл!\n"
+            need_to_send = True
+
+        if consumed_kbzu["Калории"] < daily_kbzu["Калории"] * 0.8:
+            remaining_calories = daily_kbzu["Калории"] - consumed_kbzu["Калории"]
+            message += f"- Вы потребили только {int(consumed_kbzu['Калории'])} ккал из {int(daily_kbzu['Калории'])}. Осталось {int(remaining_calories)} ккал!"
+            need_to_send = True
+
+        if need_to_send:
+            try:
+                bot.send_message(chat_id, message)
+            except Exception as e:
+                print(f"Ошибка отправки комбинированного сообщения для {username}: {e}")
+
+# Планирование уведомлений
+def schedule_notifications():
+    schedule.every().day.at("18:00").do(send_combined_notification)
+    schedule.every().day.at("21:00").do(send_meal_notification)
+    schedule.every().day.at("20:00").do(send_water_notification)
+    schedule.every().day.at("21:00").do(send_water_notification)
+    schedule.every().day.at("22:00").do(send_water_notification)
+
+    while True:
+        schedule.run_pending()
+        time.sleep(60)
+
+# Telegram-бот: команда /start
+@bot.message_handler(commands=['start'])
+def send_welcome(message):
+    bot.reply_to(message, "Введите ваш логин и пароль в формате: /auth логин пароль")
+
+# Telegram-бот: команда /auth
+@bot.message_handler(commands=['auth'])
+def auth_user(message):
+    try:
+        parts = message.text.split()
+        if len(parts) != 3:
+            bot.reply_to(message, "Формат: /auth логин пароль")
+            return
+
+        _, username, password = parts
+        users = load_users()
+
+        if username in users and users[username]["password"] == password:
+            users[username]["telegram_id"] = str(message.chat.id)
+            save_users(users)
+            bot.reply_to(message, "Вы успешно авторизованы! Теперь вы будете получать уведомления в 18:00, 20:00, 21:00 и 22:00.")
+        else:
+            bot.reply_to(message, "Неверный логин или пароль.")
+    except Exception as e:
+        bot.reply_to(message, f"Ошибка: {e}")
+
+def handle_client(client_socket):
+    try:
+        data = client_socket.recv(4096).decode('utf-8')
+        if not data:
+            return
+
+        action, username, *rest = data.split(':', 2)
+        users = load_users()
+
+        if action == "register":
+            password = rest[0]
+            if username in users:
+                client_socket.send("Пользователь уже существует".encode('utf-8'))
+            else:
+                users[username] = {
+                    "password": password,
+                    "personal_data": {},
+                    "meals": [],
+                    "water_consumed": 0,
+                    "daily_goal": 2000,
+                    "last_reset": "1970-01-01",
+                    "telegram_id": None,
+                    "weight_history": []
+                }
+                save_users(users)
+                client_socket.send("SUCCESS".encode('utf-8'))
+
+        elif action == "login":
+            password = rest[0]
+            if username in users and users[username]["password"] == password:
+                reset_daily_data(users, username)
+                client_socket.send(f"SUCCESS:{json.dumps(users[username])}".encode('utf-8'))
+            else:
+                client_socket.send("Неверный логин или пароль".encode('utf-8'))
+
+        elif action == "save_personal_data":
+            password, json_data = rest[0].split(':', 1)
+            if username in users and users[username]["password"] == password:
+                personal_data = json.loads(json_data)
+                users[username]["personal_data"] = personal_data
+                save_users(users)
+                client_socket.send("SUCCESS".encode('utf-8'))
+            else:
+                client_socket.send("Ошибка аутентификации".encode('utf-8'))
+
+        elif action == "save_meal":
+            password, json_data = rest[0].split(':', 1)
+            if username in users and users[username]["password"] == password:
+                meal_data = json.loads(json_data)
+                reset_daily_data(users, username)
+                users[username]["meals"].append(meal_data)
+                save_users(users)
+                client_socket.send("SUCCESS".encode('utf-8'))
+            else:
+                client_socket.send("Ошибка аутентификации".encode('utf-8'))
+
+        elif action == "save_water":
+            password, water_amount = rest[0].split(':', 1)
+            if username in users and users[username]["password"] == password:
+                reset_daily_data(users, username)
+                users[username]["water_consumed"] = float(water_amount)
+                save_users(users)
+                client_socket.send("SUCCESS".encode('utf-8'))
+            else:
+                client_socket.send("Ошибка аутентификации".encode('utf-8'))
+
+        elif action == "save_goal":
+            password, goal_amount = rest[0].split(':', 1)
+            if username in users and users[username]["password"] == password:
+                users[username]["daily_goal"] = float(goal_amount)
+                save_users(users)
+                client_socket.send("SUCCESS".encode('utf-8'))
+            else:
+                client_socket.send("Ошибка аутентификации".encode('utf-8'))
+
+        elif action == "save_weight":
+            password, json_data = rest[0].split(':', 1)
+            if username in users and users[username]["password"] == password:
+                weight_entry = json.loads(json_data)
+                today = weight_entry["date"]
+                weight = weight_entry["weight"]
+
+                weight_history = users[username].get("weight_history", [])
+                if any(entry["date"] == today for entry in weight_history):
+                    client_socket.send("WEIGHT_ALREADY_SET".encode('utf-8'))
+                else:
+                    weight_history.append(weight_entry)
+                    users[username]["weight_history"] = weight_history
+                    if "personal_data" in users[username]:
+                        users[username]["personal_data"]["weight"] = weight
+                    save_users(users)
+                    client_socket.send("SUCCESS".encode('utf-8'))
+            else:
+                client_socket.send("Ошибка аутентификации".encode('utf-8'))
+
+    except Exception as e:
+        client_socket.send(f"Ошибка: {e}".encode('utf-8'))
+    finally:
+        client_socket.close()
+
+def start_server():
+    server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    server_socket.bind(('0.0.0.0', 5555))
+    server_socket.listen(5)
+    print("Сервер запущен на 0.0.0.0:5555")
+
+    bot_thread = threading.Thread(target=bot.polling, args=(True,))
+    bot_thread.daemon = True
+    bot_thread.start()
+
+    notification_thread = threading.Thread(target=schedule_notifications)
+    notification_thread.daemon = True
+    notification_thread.start()
+
+    while True:
+        client_socket, addr = server_socket.accept()
+        print(f"Подключение от {addr}")
+        thread = threading.Thread(target=handle_client, args=(client_socket,))
+        thread.start()
+
+if __name__ == "__main__":
+    start_server()
