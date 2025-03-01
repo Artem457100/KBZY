@@ -1,0 +1,816 @@
+from kivy.app import App
+from kivy.uix.boxlayout import BoxLayout
+from kivy.uix.label import Label
+from kivy.uix.textinput import TextInput
+from kivy.uix.button import Button
+from kivy.uix.spinner import Spinner
+from kivy.uix.screenmanager import ScreenManager, Screen
+from kivy.uix.gridlayout import GridLayout
+from kivy.uix.popup import Popup
+from kivy.uix.progressbar import ProgressBar
+from kivy.uix.dropdown import DropDown
+from kivy.uix.scrollview import ScrollView
+from kivy.uix.image import Image
+from datetime import datetime
+import socket
+import json
+import matplotlib.pyplot as plt
+import os
+
+# Данные школьного питания внутри кода
+school1 = {
+    "Понедельник": {"Ккал": 470, "Белки": 22.87, "Жиры": 37.45, "Углеводы": 112.54},
+    "Вторник": {"Ккал": 475, "Белки": 27.43, "Жиры": 48.37, "Углеводы": 77.27},
+    "Среда": {"Ккал": 460, "Белки": 32.31, "Жиры": 80.02, "Углеводы": 73.24},
+    "Четверг": {"Ккал": 460, "Белки": 23.26, "Жиры": 98.88, "Углеводы": 84.62},
+    "Пятница": {"Ккал": 425, "Белки": 18.61, "Жиры": 58.65, "Углеводы": 97.97}
+}
+
+school2 = {
+    "Понедельник": {"Ккал": 536, "Белки": 15.01, "Жиры": 86, "Углеводы": 0},
+    "Вторник": {"Ккал": 320, "Белки": 23.69, "Жиры": 50.88, "Углеводы": 0},
+    "Среда": {"Ккал": 446, "Белки": 9.85, "Жиры": 132, "Углеводы": 0},
+    "Четверг": {"Ккал": 420, "Белки": 30.67, "Жиры": 100.33, "Углеводы": 0},
+    "Пятница": {"Ккал": 437, "Белки": 12.24, "Жиры": 66.08, "Углеводы": 0}
+}
+
+# База данных блюд (КБЖУ на 1 грамм)
+food_database = {
+    "Омлет": {"Ккал": 2.4, "Белки": 0.15, "Жиры": 0.20, "Углеводы": 0.05},
+    "Овсянка": {"Ккал": 0.68, "Белки": 0.11, "Жиры": 0.06, "Углеводы": 0.12},
+    "Куриная грудка": {"Ккал": 1.65, "Белки": 0.31, "Жиры": 0.03, "Углеводы": 0},
+    "Гречка": {"Ккал": 1.23, "Белки": 0.13, "Жиры": 0.03, "Углеводы": 0.20},
+    "Рис": {"Ккал": 1.30, "Белки": 0.07, "Жиры": 0.01, "Углеводы": 0.28},
+    "Картофель": {"Ккал": 0.77, "Белки": 0.02, "Жиры": 0.01, "Углеводы": 0.17},
+    "Яблоко": {"Ккал": 0.52, "Белки": 0.003, "Жиры": 0.002, "Углеводы": 0.14},
+    "Творог 5%": {"Ккал": 1.21, "Белки": 0.17, "Жиры": 0.05, "Углеводы": 0.03},
+    "Лосось": {"Ккал": 2.08, "Белки": 0.25, "Жиры": 0.13, "Углеводы": 0},
+    "Говядина": {"Ккал": 2.50, "Белки": 0.27, "Жиры": 0.15, "Углеводы": 0},
+    "Брокколи": {"Ккал": 0.34, "Белки": 0.03, "Жиры": 0.004, "Углеводы": 0.07},
+    "Морковь": {"Ккал": 0.41, "Белки": 0.01, "Жиры": 0.002, "Углеводы": 0.10},
+    "Банан": {"Ккал": 0.89, "Белки": 0.01, "Жиры": 0.003, "Углеводы": 0.23},
+    "Хлеб белый": {"Ккал": 2.65, "Белки": 0.08, "Жиры": 0.03, "Углеводы": 0.49},
+    "Сыр твердый": {"Ккал": 3.50, "Белки": 0.26, "Жиры": 0.28, "Углеводы": 0.01},
+    "Яйцо вареное": {"Ккал": 1.55, "Белки": 0.13, "Жиры": 0.11, "Углеводы": 0.01},
+    "Макароны": {"Ккал": 1.31, "Белки": 0.05, "Жиры": 0.01, "Углеводы": 0.25},
+    "Огурец": {"Ккал": 0.15, "Белки": 0.007, "Жиры": 0.001, "Углеводы": 0.03},
+    "Помидор": {"Ккал": 0.18, "Белки": 0.009, "Жиры": 0.002, "Углеводы": 0.04},
+    "Авокадо": {"Ккал": 1.60, "Белки": 0.02, "Жиры": 0.15, "Углеводы": 0.09},
+    "Греческий йогурт": {"Ккал": 0.59, "Белки": 0.10, "Жиры": 0.03, "Углеводы": 0.04},
+    "Миндаль": {"Ккал": 5.79, "Белки": 0.21, "Жиры": 0.50, "Углеводы": 0.22},
+    "Котлета говяжья": {"Ккал": 2.60, "Белки": 0.18, "Жиры": 0.20, "Углеводы": 0.05}
+}
+
+# Функция расчёта КБЖУ
+def calculate_kbzu(weight, height, age, gender, activity_factor, goal_choice):
+    if gender.upper() == "М":
+        bmr = 10 * weight + 6.25 * height - 5 * age + 5
+    else:
+        bmr = 10 * weight + 6.25 * height - 5 * age - 161
+
+    tdee = bmr * activity_factor
+
+    if goal_choice == 1:  # Похудеть
+        calories = tdee - 500
+    elif goal_choice == 2:  # Набрать вес
+        calories = tdee + 300
+    else:  # Поддерживать вес
+        calories = tdee
+
+    protein_grams = 2 * weight
+    fat_grams = 1 * weight
+    protein_cal = protein_grams * 4
+    fat_cal = fat_grams * 9
+    carbs_cal = calories - (protein_cal + fat_cal)
+    if carbs_cal < 0:
+        carbs_cal = 0
+    carbs_grams = carbs_cal / 4
+
+    return {
+        "Калории": calories,
+        "Белки": protein_grams,
+        "Жиры": fat_grams,
+        "Углеводы": carbs_grams
+    }
+
+
+class LoginScreen(Screen):
+    def __init__(self, **kwargs):
+        super(LoginScreen, self).__init__(**kwargs)
+        layout = BoxLayout(orientation='vertical', padding=20, spacing=10)
+
+        self.title_label = Label(text='Вход', font_size=24)
+        layout.add_widget(self.title_label)
+
+        self.username_input = TextInput(hint_text='Логин', multiline=False)
+        layout.add_widget(self.username_input)
+
+        self.password_input = TextInput(hint_text='Пароль', password=True, multiline=False)
+        layout.add_widget(self.password_input)
+
+        self.login_button = Button(text='Войти')
+        self.login_button.bind(on_press=self.login)
+        layout.add_widget(self.login_button)
+
+        self.register_button =	Button(text='Зарегистрироваться')
+        self.register_button.bind(on_press=self.register)
+        layout.add_widget(self.register_button)
+
+        self.status_label = Label(text='', color=(1, 0, 0, 1))
+        layout.add_widget(self.status_label)
+
+        self.add_widget(layout)
+
+    def login(self, instance):
+        username = self.username_input.text.strip()
+        password = self.password_input.text.strip()
+
+        if not username or not password:
+            self.status_label.text = "Введите логин и пароль"
+            return
+
+        client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        client_socket.connect(('127.0.0.1', 5555))
+
+        client_socket.send(f"login:{username}:{password}".encode('utf-8'))
+        response = client_socket.recv(4096).decode('utf-8')
+
+        if response.startswith("SUCCESS"):
+            _, user_data_json = response.split(':', 1)
+            user_data = json.loads(user_data_json)
+
+            self.manager.user_data = user_data
+            self.manager.username = username
+            self.manager.password = password
+
+            water_screen = self.manager.get_screen('water')
+            water_screen.water_consumed = user_data["water_consumed"]
+            water_screen.daily_goal = user_data["daily_goal"]
+            water_screen.update_progress()
+
+            goal_screen = self.manager.get_screen('goal')
+            goal_screen.update_goal(user_data["personal_data"].get("goal_choice", 3))
+            goal_screen.update_progress(user_data["weight_history"])
+
+            if user_data["personal_data"].get("weight") is not None:
+                self.manager.current = 'kbzu'
+                kbzu_screen = self.manager.get_screen('kbzu')
+                kbzu_screen.meals = user_data["meals"]
+                kbzu_screen.update_from_server(user_data["personal_data"])
+            else:
+                self.manager.current = 'input'
+            self.status_label.text = ""
+        else:
+            self.status_label.text = response
+
+        client_socket.close()
+
+    def register(self, instance):
+        username = self.username_input.text.strip()
+        password = self.password_input.text.strip()
+
+        if not username or not password:
+            self.status_label.text = "Введите логин и пароль"
+            return
+
+        client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        client_socket.connect(('127.0.0.1', 5555))
+
+        client_socket.send(f"register:{username}:{password}".encode('utf-8'))
+        response = client_socket.recv(1024).decode('utf-8')
+
+        if response == "SUCCESS":
+            self.status_label.text = "Регистрация успешна, войдите"
+        else:
+            self.status_label.text = response
+
+        client_socket.close()
+
+
+class InputScreen(Screen):
+    def __init__(self, **kwargs):
+        super(InputScreen, self).__init__(**kwargs)
+        layout = BoxLayout(orientation='vertical', padding=20, spacing=10)
+
+        layout.add_widget(Label(text='Вес (кг):'))
+        self.weight_input = TextInput(multiline=False)
+        layout.add_widget(self.weight_input)
+
+        layout.add_widget(Label(text='Рост (см):'))
+        self.height_input = TextInput(multiline=False)
+        layout.add_widget(self.height_input)
+
+        layout.add_widget(Label(text='Возраст:'))
+        self.age_input = TextInput(multiline=False)
+        layout.add_widget(self.age_input)
+
+        layout.add_widget(Label(text='Пол:'))
+        self.gender_spinner = Spinner(text='Выберите пол', values=('Мужской', 'Женский'))
+        layout.add_widget(self.gender_spinner)
+
+        layout.add_widget(Label(text='Активность:'))
+        self.activity_spinner = Spinner(
+            text='Выберите активность',
+            values=(
+                'Без физ нагрузки',
+                'Легкие физ нагрузки (1-3 в неделю)',
+                'Физ нагрузки (3-5 в неделю)',
+                'Ежедневные интенсивные нагрузки',
+                'Спортсмен или похожие нагрузки'
+            )
+        )
+        layout.add_widget(self.activity_spinner)
+
+        layout.add_widget(Label(text='Цель:'))
+        self.goal_spinner = Spinner(
+            text='Выберите цель',
+            values=('Похудеть', 'Набрать вес', 'Поддерживать вес')
+        )
+        layout.add_widget(self.goal_spinner)
+
+        layout.add_widget(Label(text='Питание:'))
+        self.diet_spinner = Spinner(text='Выберите питание', values=('Мясное', 'Молочное', 'Я не питаюсь'))
+        layout.add_widget(self.diet_spinner)
+
+        self.submit_button = Button(text='Отправить')
+        self.submit_button.bind(on_press=self.submit_data)
+        layout.add_widget(self.submit_button)
+
+        self.add_widget(layout)
+
+    def submit_data(self, instance):
+        try:
+            weight = float(self.weight_input.text)
+            height = float(self.height_input.text)
+            age = int(self.age_input.text)
+            gender = self.gender_spinner.text[0].upper()
+            activity = self.activity_spinner.text
+            goal = self.goal_spinner.text
+            diet = self.diet_spinner.text
+
+            activity_factors = {
+                'Без физ нагрузки': 1.2,
+                'Легкие физ нагрузки (1-3 в неделю)': 1.375,
+                'Физ нагрузки (3-5 в неделю)': 1.55,
+                'Ежедневные интенсивные нагрузки': 1.725,
+                'Спортсмен или похожие нагрузки': 1.9
+            }
+            activity_factor = activity_factors.get(activity, 1.2)
+
+            goals = {'Похудеть': 1, 'Набрать вес': 2, 'Поддерживать вес': 3}
+            goal_choice = goals.get(goal, 3)
+
+            personal_data = {
+                "weight": weight,
+                "height": height,
+                "age": age,
+                "gender": gender,
+                "activity_factor": activity_factor,
+                "goal_choice": goal_choice,
+                "diet": diet
+            }
+
+            client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            client_socket.connect(('127.0.0.1', 5555))
+            client_socket.send(
+                f"save_personal_data:{self.manager.username}:{self.manager.password}:{json.dumps(personal_data)}".encode('utf-8')
+            )
+            response = client_socket.recv(1024).decode('utf-8')
+            client_socket.close()
+
+            if response == "SUCCESS":
+                self.manager.current = 'kbzu'
+                self.manager.get_screen('kbzu').update_kbzu(weight, height, age, gender, activity_factor, goal_choice, diet)
+                self.manager.get_screen('goal').update_goal(goal_choice)
+                self.update_weight_history(weight)
+            else:
+                print(f"Ошибка сохранения данных: {response}")
+        except ValueError:
+            print("Ошибка: введите корректные числовые данные!")
+
+    def update_weight_history(self, weight):
+        today = datetime.now().date().isoformat()
+        weight_history = self.manager.user_data.get("weight_history", [])
+        if any(entry["date"] == today for entry in weight_history):
+            return  # Вес уже введён сегодня, не отправляем на сервер
+
+        client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        client_socket.connect(('127.0.0.1', 5555))
+        weight_entry = {"date": today, "weight": weight}
+        client_socket.send(
+            f"save_weight:{self.manager.username}:{self.manager.password}:{json.dumps(weight_entry)}".encode('utf-8')
+        )
+        response = client_socket.recv(1024).decode('utf-8')
+        client_socket.close()
+
+        if response == "SUCCESS":
+            self.manager.get_screen('goal').update_progress([weight_entry])
+
+
+class KbzuScreen(Screen):
+    def __init__(self, **kwargs):
+        super(KbzuScreen, self).__init__(**kwargs)
+        self.meals = []
+        self.initial_kbzu = {}
+        self.current_kbzu = {}
+        self.selected_food = None
+
+        self.layout = BoxLayout(orientation='vertical', padding=20, spacing=10)
+        self.add_widget(self.layout)
+
+        self.day_label = Label(text='Текущий день: ', font_size=18, size_hint_y=None, height=30)
+        self.layout.add_widget(self.day_label)
+
+        self.daily_header = Label(text='Оставшееся дневное КБЖУ:', font_size=20, size_hint_y=None, height=40)
+        self.layout.add_widget(self.daily_header)
+
+        self.kbzu_table = GridLayout(cols=2, size_hint_y=None)
+        self.kbzu_table.bind(minimum_height=self.kbzu_table.setter('height'))
+        self.layout.add_widget(self.kbzu_table)
+
+        self.kbzu_table.add_widget(Label(text='Калории:', size_hint_y=None, height=30))
+        self.calories_value = Label(text='', size_hint_y=None, height=30)
+        self.kbzu_table.add_widget(self.calories_value)
+
+        self.kbzu_table.add_widget(Label(text='Белки:', size_hint_y=None, height=30))
+        self.protein_value = Label(text='', size_hint_y=None, height=30)
+        self.kbzu_table.add_widget(self.protein_value)
+
+        self.kbzu_table.add_widget(Label(text='Жиры:', size_hint_y=None, height=30))
+        self.fat_value = Label(text='', size_hint_y=None, height=30)
+        self.kbzu_table.add_widget(self.fat_value)
+
+        self.kbzu_table.add_widget(Label(text='Углеводы:', size_hint_y=None, height=30))
+        self.carbs_value = Label(text='', size_hint_y=None, height=30)
+        self.kbzu_table.add_widget(self.carbs_value)
+
+        self.meals_header = Label(text='Приемы пищи:', font_size=20, size_hint_y=None, height=40)
+        self.layout.add_widget(self.meals_header)
+
+        self.scroll_view = ScrollView(size_hint=(1, 1))
+        self.layout.add_widget(self.scroll_view)
+
+        self.meals_table = GridLayout(cols=5, size_hint=(1, None), spacing=5, padding=5)
+        self.meals_table.bind(minimum_height=self.meals_table.setter('height'))
+        self.scroll_view.add_widget(self.meals_table)
+
+        self.meals_table.add_widget(
+            Label(text='Название', size_hint_y=None, height=30, text_size=(150, None), halign='left', valign='middle'))
+        self.meals_table.add_widget(
+            Label(text='Калории', size_hint_y=None, height=30, text_size=(80, None), halign='center', valign='middle'))
+        self.meals_table.add_widget(
+            Label(text='Белки', size_hint_y=None, height=30, text_size=(60, None), halign='center', valign='middle'))
+        self.meals_table.add_widget(
+            Label(text='Жиры', size_hint_y=None, height=30, text_size=(60, None), halign='center', valign='middle'))
+        self.meals_table.add_widget(
+            Label(text='Углеводы', size_hint_y=None, height=30, text_size=(60, None), halign='center', valign='middle'))
+
+        self.add_button = Button(text='Добавить прием пищи', size_hint_y=None, height=50)
+        self.add_button.bind(on_press=self.show_add_meal_popup)
+        self.layout.add_widget(self.add_button)
+
+        nav_layout = BoxLayout(size_hint_y=None, height=50)
+        self.layout.add_widget(nav_layout)
+
+        kbzu_button = Button(text='КБЖУ', size_hint=(1, None), height=50)
+        kbzu_button.bind(on_press=lambda x: self.switch_to('kbzu'))
+        nav_layout.add_widget(kbzu_button)
+
+        water_button = Button(text='Вода', size_hint=(1, None), height=50)
+        water_button.bind(on_press=lambda x: self.switch_to('water'))
+        nav_layout.add_widget(water_button)
+
+        goal_button = Button(text='Цель', size_hint=(1, None), height=50)
+        goal_button.bind(on_press=lambda x: self.switch_to('goal'))
+        nav_layout.add_widget(goal_button)
+
+    def update_from_server(self, personal_data):
+        weight = personal_data["weight"]
+        height = personal_data["height"]
+        age = personal_data["age"]
+        gender = personal_data["gender"]
+        activity_factor = personal_data["activity_factor"]
+        goal_choice = personal_data["goal_choice"]
+        diet = personal_data["diet"]
+        self.update_kbzu(weight, height, age, gender, activity_factor, goal_choice, diet)
+
+        self.meals_table.clear_widgets()
+        self.meals_table.add_widget(
+            Label(text='Название', size_hint_y=None, height=30, text_size=(150, None), halign='left', valign='middle'))
+        self.meals_table.add_widget(
+            Label(text='Калории', size_hint_y=None, height=30, text_size=(80, None), halign='center', valign='middle'))
+        self.meals_table.add_widget(
+            Label(text='Белки', size_hint_y=None, height=30, text_size=(60, None), halign='center', valign='middle'))
+        self.meals_table.add_widget(
+            Label(text='Жиры', size_hint_y=None, height=30, text_size=(60, None), halign='center', valign='middle'))
+        self.meals_table.add_widget(
+            Label(text='Углеводы', size_hint_y=None, height=30, text_size=(60, None), halign='center', valign='middle'))
+
+        for meal in self.meals:
+            self.meals_table.add_widget(
+                Label(text=meal["Название"], size_hint_y=None, height=40, text_size=(150, None), halign='left', valign='middle'))
+            self.meals_table.add_widget(
+                Label(text=f'{meal["Калории"]:.0f} ккал', size_hint_y=None, height=40, text_size=(80, None), halign='center', valign='middle'))
+            self.meals_table.add_widget(
+                Label(text=f'{meal["Белки"]:.0f} г', size_hint_y=None, height=40, text_size=(60, None), halign='center', valign='middle'))
+            self.meals_table.add_widget(
+                Label(text=f'{meal["Жиры"]:.0f} г', size_hint_y=None, height=40, text_size=(60, None), halign='center', valign='middle'))
+            self.meals_table.add_widget(
+                Label(text=f'{meal["Углеводы"]:.0f} г', size_hint_y=None, height=40, text_size=(60, None), halign='center', valign='middle'))
+
+            self.current_kbzu["Калории"] -= meal["Калории"]
+            self.current_kbzu["Белки"] -= meal["Белки"]
+            self.current_kbzu["Жиры"] -= meal["Жиры"]
+            self.current_kbzu["Углеводы"] -= meal["Углеводы"]
+        self.update_kbzu_labels()
+
+    def update_kbzu(self, weight, height, age, gender, activity_factor, goal_choice, diet):
+        daily_kbzu = calculate_kbzu(weight, height, age, gender, activity_factor, goal_choice)
+        self.initial_kbzu = daily_kbzu.copy()
+        self.current_kbzu = daily_kbzu.copy()
+
+        current_day = datetime.now().weekday()
+        days = {0: "Понедельник", 1: "Вторник", 2: "Среда", 3: "Четверг", 4: "Пятница", 5: "Понедельник", 6: "Понедельник"}
+        selected_day = days[current_day]
+
+        if diet != "Я не питаюсь" and current_day not in (5, 6):
+            if diet == "Мясное":
+                school_data = school1
+                diet_str = "мясное"
+            else:
+                school_data = school2
+                diet_str = "молочное"
+
+            school_kbzu = school_data[selected_day]
+
+            self.meals.append({
+                "Название": f"Школьное питание ({diet_str})",
+                "Калории": school_kbzu["Ккал"],
+                "Белки": school_kbzu["Белки"],
+                "Жиры": school_kbzu["Жиры"],
+                "Углеводы": school_kbzu["Углеводы"]
+            })
+
+            self.meals_table.add_widget(
+                Label(text=f"Школьное питание ({diet_str})", size_hint_y=None, height=40, text_size=(150, None), halign='left', valign='middle'))
+            self.meals_table.add_widget(
+                Label(text=f'{school_kbzu["Ккал"]:.0f} ккал', size_hint_y=None, height=40, text_size=(80, None), halign='center', valign='middle'))
+            self.meals_table.add_widget(
+                Label(text=f'{school_kbzu["Белки"]:.0f} г', size_hint_y=None, height=40, text_size=(60, None), halign='center', valign='middle'))
+            self.meals_table.add_widget(
+                Label(text=f'{school_kbzu["Жиры"]:.0f} г', size_hint_y=None, height=40, text_size=(60, None), halign='center', valign='middle'))
+            self.meals_table.add_widget(
+                Label(text=f'{school_kbzu["Углеводы"]:.0f} г', size_hint_y=None, height=40, text_size=(60, None), halign='center', valign='middle'))
+
+            self.current_kbzu["Калории"] -= school_kbzu["Ккал"]
+            self.current_kbzu["Белки"] -= school_kbzu["Белки"]
+            self.current_kbzu["Жиры"] -= school_kbzu["Жиры"]
+            self.current_kbzu["Углеводы"] -= school_kbzu["Углеводы"]
+            diet_display = diet_str
+        else:
+            diet_display = "не питаюсь"
+
+        self.day_label.text = f'Текущий день: {selected_day}, питание: {diet_display}'
+        self.update_kbzu_labels()
+
+    def update_kbzu_labels(self):
+        self.calories_value.text = f'{self.current_kbzu["Калории"]:.0f} ккал'
+        self.protein_value.text = f'{self.current_kbzu["Белки"]:.0f} г'
+        self.fat_value.text = f'{self.current_kbzu["Жиры"]:.0f} г'
+        self.carbs_value.text = f'{self.current_kbzu["Углеводы"]:.0f} г'
+
+    def show_add_meal_popup(self, instance):
+        content = BoxLayout(orientation='vertical', padding=10, spacing=10)
+
+        self.search_input = TextInput(hint_text='Введите название блюда', multiline=False, size_hint_y=None, height=40)
+        self.search_input.bind(text=self.on_search_text)
+        content.add_widget(self.search_input)
+
+        self.food_list_scroll = ScrollView(size_hint=(1, 0.5))
+        self.food_list = BoxLayout(orientation='vertical', size_hint_y=None)
+        self.food_list.bind(minimum_height=self.food_list.setter('height'))
+        self.food_list_scroll.add_widget(self.food_list)
+        content.add_widget(self.food_list_scroll)
+
+        self.mass_input = TextInput(hint_text='Масса (г)', multiline=False, input_filter='float', size_hint_y=None, height=40)
+        content.add_widget(self.mass_input)
+
+        add_btn = Button(text='Добавить', size_hint_y=None, height=50)
+        add_btn.bind(on_press=self.add_meal)
+        content.add_widget(add_btn)
+
+        self.popup = Popup(title='Добавить прием пищи', content=content, size_hint=(0.8, 0.8))
+        self.popup.open()
+
+        self.update_food_list('')
+
+    def on_search_text(self, instance, value):
+        self.update_food_list(value.lower())
+
+    def update_food_list(self, search_text):
+        self.food_list.clear_widgets()
+        filtered_foods = [food for food in food_database.keys() if search_text in food.lower()]
+        for food in filtered_foods:
+            btn = Button(text=food, size_hint_y=None, height=40)
+            btn.bind(on_press=lambda instance, f=food: self.select_food(f))
+            self.food_list.add_widget(btn)
+
+    def select_food(self, food_name):
+        self.selected_food = food_name
+        self.search_input.text = food_name
+
+    def add_meal(self, instance):
+        food_name = self.selected_food
+        mass = float(self.mass_input.text.strip() or "0")
+
+        if food_name in food_database and mass > 0:
+            food_data = food_database[food_name]
+            calories = food_data["Ккал"] * mass
+            protein = food_data["Белки"] * mass
+            fat = food_data["Жиры"] * mass
+            carbs = food_data["Углеводы"] * mass
+
+            meal_data = {
+                "Название": f"{food_name} ({mass} г)",
+                "Калории": calories,
+                "Белки": protein,
+                "Жиры": fat,
+                "Углеводы": carbs
+            }
+
+            client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            client_socket.connect(('127.0.0.1', 5555))
+            client_socket.send(f"save_meal:{self.manager.username}:{self.manager.password}:{json.dumps(meal_data)}".encode('utf-8'))
+            response = client_socket.recv(1024).decode('utf-8')
+            client_socket.close()
+
+            if response == "SUCCESS":
+                self.meals.append(meal_data)
+                self.meals_table.add_widget(
+                    Label(text=f"{food_name} ({mass} г)", size_hint_y=None, height=40, text_size=(150, None), halign='left', valign='middle'))
+                self.meals_table.add_widget(
+                    Label(text=f'{calories:.0f} ккал', size_hint_y=None, height=40, text_size=(80, None), halign='center', valign='middle'))
+                self.meals_table.add_widget(
+                    Label(text=f'{protein:.0f} г', size_hint_y=None, height=40, text_size=(60, None), halign='center', valign='middle'))
+                self.meals_table.add_widget(
+                    Label(text=f'{fat:.0f} г', size_hint_y=None, height=40, text_size=(60, None), halign='center', valign='middle'))
+                self.meals_table.add_widget(
+                    Label(text=f'{carbs:.0f} г', size_hint_y=None, height=40, text_size=(60, None), halign='center', valign='middle'))
+
+                self.current_kbzu["Калории"] -= calories
+                self.current_kbzu["Белки"] -= protein
+                self.current_kbzu["Жиры"] -= fat
+                self.current_kbzu["Углеводы"] -= carbs
+                self.update_kbzu_labels()
+
+                self.popup.dismiss()
+                self.search_input.text = ''
+                self.mass_input.text = ''
+                self.selected_food = None
+
+    def switch_to(self, screen_name):
+        self.manager.current = screen_name
+
+
+class WaterScreen(Screen):
+    def __init__(self, **kwargs):
+        super(WaterScreen, self).__init__(**kwargs)
+        self.water_consumed = 0
+        self.base_goal = 2000
+        self.weather_bonus = 0
+        self.daily_goal = self.base_goal + self.weather_bonus
+
+        self.layout = BoxLayout(orientation='vertical', padding=20, spacing=10)
+        self.add_widget(self.layout)
+
+        self.progress_label = Label(text=f'Выпито: {self.water_consumed} мл из {self.daily_goal} мл (0%)', font_size=20)
+        self.layout.add_widget(self.progress_label)
+
+        self.progress_bar = ProgressBar(max=self.daily_goal, value=0)
+        self.layout.add_widget(self.progress_bar)
+
+        input_layout = GridLayout(cols=3, spacing=10, size_hint_y=None, height=50)
+        self.layout.add_widget(input_layout)
+
+        self.drink_dropdown = DropDown()
+        drinks = {
+            'Вода': 1.00,
+            'Кофе': 0.99,
+            'Чай': 0.99,
+            'Молоко': 0.86,
+            'Газировка': 0.95,
+            'Фруктовый сок': 0.92
+        }
+
+        for drink, factor in drinks.items():
+            btn = Button(text=drink, size_hint_y=None, height=44)
+            btn.bind(on_release=lambda btn, f=factor, d=drink: self.show_amount_popup(f, d))
+            self.drink_dropdown.add_widget(btn)
+
+        self.add_button = Button(text='+', size_hint_x=0.33)
+        self.add_button.bind(on_release=self.drink_dropdown.open)
+        input_layout.add_widget(self.add_button)
+
+        self.weather_button = Button(text='☀', size_hint_x=0.33)
+        self.weather_dropdown = DropDown()
+        weather_options = {'Жарко': 375, 'Тепло': 225, 'Комфортно': 0, 'Холодно': 150}
+
+        for weather, bonus in weather_options.items():
+            btn = Button(text=weather, size_hint_y=None, height=44)
+            btn.bind(on_release=lambda btn, b=bonus: self.set_weather(b))
+            self.weather_dropdown.add_widget(btn)
+
+        self.weather_button.bind(on_release=self.weather_dropdown.open)
+        input_layout.add_widget(self.weather_button)
+
+        nav_layout = BoxLayout(size_hint_y=None, height=50)
+        self.layout.add_widget(nav_layout)
+
+        kbzu_button = Button(text='КБЖУ', size_hint=(1, None), height=50)
+        kbzu_button.bind(on_press=lambda x: self.switch_to('kbzu'))
+        nav_layout.add_widget(kbzu_button)
+
+        water_button = Button(text='Вода', size_hint=(1, None), height=50)
+        water_button.bind(on_press=lambda x: self.switch_to('water'))
+        nav_layout.add_widget(water_button)
+
+        goal_button = Button(text='Цель', size_hint=(1, None), height=50)
+        goal_button.bind(on_press=lambda x: self.switch_to('goal'))
+        nav_layout.add_widget(goal_button)
+
+    def update_progress(self):
+        percentage = (self.water_consumed / self.daily_goal) * 100
+        self.progress_label.text = f'Выпито: {int(self.water_consumed)} мл из {self.daily_goal} мл ({int(percentage)}%)'
+        self.progress_bar.max = self.daily_goal
+        self.progress_bar.value = self.water_consumed
+
+    def show_amount_popup(self, hydration_factor, drink_name):
+        content = BoxLayout(orientation='vertical', padding=10, spacing=10)
+        amount_input = TextInput(hint_text='Введите объем в мл', input_filter='int', multiline=False)
+        confirm_button = Button(text='Добавить')
+
+        content.add_widget(amount_input)
+        content.add_widget(confirm_button)
+
+        popup = Popup(title=f'Сколько {drink_name} вы выпили?', content=content, size_hint=(0.8, 0.4), auto_dismiss=False)
+        confirm_button.bind(on_release=lambda x: self.add_water(hydration_factor, amount_input.text, popup))
+        self.drink_dropdown.dismiss()
+        popup.open()
+
+    def add_water(self, hydration_factor, amount_text, popup):
+        try:
+            amount = int(amount_text)
+            if amount > 0:
+                effective_water = amount * hydration_factor
+                self.water_consumed += effective_water
+
+                client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                client_socket.connect(('127.0.0.1', 5555))
+                client_socket.send(f"save_water:{self.manager.username}:{self.manager.password}:{self.water_consumed}".encode('utf-8'))
+                response = client_socket.recv(1024).decode('utf-8')
+                client_socket.close()
+
+                if response == "SUCCESS":
+                    self.update_progress()
+                    popup.dismiss()
+        except ValueError:
+            pass
+
+    def set_weather(self, bonus):
+        self.weather_bonus = bonus
+        self.daily_goal = self.base_goal + self.weather_bonus
+
+        client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        client_socket.connect(('127.0.0.1', 5555))
+        client_socket.send(f"save_goal:{self.manager.username}:{self.manager.password}:{self.daily_goal}".encode('utf-8'))
+        response = client_socket.recv(1024).decode('utf-8')
+        client_socket.close()
+
+        if response == "SUCCESS":
+            self.update_progress()
+            self.weather_dropdown.dismiss()
+
+    def switch_to(self, screen_name):
+        self.manager.current = screen_name
+
+
+class GoalScreen(Screen):
+    def __init__(self, **kwargs):
+        super(GoalScreen, self).__init__(**kwargs)
+        self.layout = BoxLayout(orientation='vertical', padding=20, spacing=10)
+        self.add_widget(self.layout)
+
+        self.goal_label = Label(text='Ваша цель: ', font_size=20, size_hint_y=None, height=40)
+        self.layout.add_widget(self.goal_label)
+
+        self.weight_input = TextInput(hint_text='Введите текущий вес (кг)', multiline=False, size_hint_y=None, height=40)
+        self.layout.add_widget(self.weight_input)
+
+        self.update_button = Button(text='Обновить вес', size_hint_y=None, height=50)
+        self.update_button.bind(on_press=self.update_weight)
+        self.layout.add_widget(self.update_button)
+
+        self.status_label = Label(text='', color=(1, 0, 0, 1), size_hint_y=None, height=40)
+        self.layout.add_widget(self.status_label)
+
+        self.graph_image = Image(source='weight_graph.png' if os.path.exists('weight_graph.png') else '', size_hint=(1, 1))
+        self.layout.add_widget(self.graph_image)
+
+        nav_layout = BoxLayout(size_hint_y=None, height=50)
+        self.layout.add_widget(nav_layout)
+
+        kbzu_button = Button(text='КБЖУ', size_hint=(1, None), height=50)
+        kbzu_button.bind(on_press=lambda x: self.switch_to('kbzu'))
+        nav_layout.add_widget(kbzu_button)
+
+        water_button = Button(text='Вода', size_hint=(1, None), height=50)
+        water_button.bind(on_press=lambda x: self.switch_to('water'))
+        nav_layout.add_widget(water_button)
+
+        goal_button = Button(text='Цель', size_hint=(1, None), height=50)
+        goal_button.bind(on_press=lambda x: self.switch_to('goal'))
+        nav_layout.add_widget(goal_button)
+
+    def update_goal(self, goal_choice):
+        if goal_choice == 1:
+            self.goal_label.text = 'Ваша цель: Похудеть'
+        elif goal_choice == 2:
+            self.goal_label.text = 'Ваша цель: Набрать вес'
+        else:
+            self.goal_label.text = 'Ваша цель: Поддерживать вес'
+
+    def update_weight(self, instance):
+        try:
+            weight = float(self.weight_input.text)
+            today = datetime.now().date().isoformat()
+
+            # Проверка на стороне клиента
+            weight_history = self.manager.user_data.get("weight_history", [])
+            if any(entry["date"] == today for entry in weight_history):
+                self.status_label.text = "Вы уже ввели вес сегодня!"
+                return
+
+            client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            client_socket.connect(('127.0.0.1', 5555))
+            weight_entry = {"date": today, "weight": weight}
+            client_socket.send(
+                f"save_weight:{self.manager.username}:{self.manager.password}:{json.dumps(weight_entry)}".encode('utf-8')
+            )
+            response = client_socket.recv(1024).decode('utf-8')
+            client_socket.close()
+
+            if response == "SUCCESS":
+                self.update_progress(self.manager.user_data["weight_history"] + [weight_entry])
+                self.weight_input.text = ""
+                self.status_label.text = "Вес успешно обновлён!"
+            elif response == "WEIGHT_ALREADY_SET":
+                self.status_label.text = "Вы уже ввели вес сегодня!"
+            else:
+                self.status_label.text = "Ошибка при обновлении веса"
+        except ValueError:
+            self.status_label.text = "Ошибка: введите корректный вес"
+
+    def update_progress(self, weight_history):
+        self.manager.user_data["weight_history"] = weight_history
+        dates = [entry["date"] for entry in weight_history]
+        weights = [entry["weight"] for entry in weight_history]
+
+        plt.figure(figsize=(8, 6))
+        plt.plot(dates, weights, marker='o', linestyle='-', color='b')
+        plt.title('Прогресс веса')
+        plt.xlabel('Дата')
+        plt.ylabel('Вес (кг)')
+        plt.xticks(rotation=45)
+        plt.tight_layout()
+        plt.savefig('weight_graph.png')
+        plt.close()
+
+        self.graph_image.source = 'weight_graph.png'
+        self.graph_image.reload()
+
+    def on_enter(self):
+        if self.manager.user_data.get("personal_data"):
+            self.update_goal(self.manager.user_data["personal_data"].get("goal_choice", 3))
+            self.update_progress(self.manager.user_data.get("weight_history", []))
+        self.status_label.text = ""
+
+    def switch_to(self, screen_name):
+        self.manager.current = screen_name
+
+
+class MyApp(App):
+    def build(self):
+        sm = ScreenManager()
+        sm.add_widget(LoginScreen(name='login'))
+        sm.add_widget(InputScreen(name='input'))
+        sm.add_widget(KbzuScreen(name='kbzu'))
+        sm.add_widget(WaterScreen(name='water'))
+        sm.add_widget(GoalScreen(name='goal'))
+        sm.user_data = {}
+        sm.username = ""
+        sm.password = ""
+        return sm
+
+
+if __name__ == '__main__':
+    MyApp().run()
