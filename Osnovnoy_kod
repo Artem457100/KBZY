@@ -97,26 +97,77 @@ def calculate_kbzu(weight, height, age, gender, activity_factor, goal_choice):
 class LoginScreen(Screen):
     def __init__(self, **kwargs):
         super(LoginScreen, self).__init__(**kwargs)
-        layout = BoxLayout(orientation='vertical', padding=20, spacing=10)
+        layout = BoxLayout(orientation='vertical', padding=30, spacing=15)
 
-        self.title_label = Label(text='Вход', font_size=24)
+        # Заголовок
+        self.title_label = Label(
+            text='Вход в систему',
+            font_size=28,
+            color=(1, 1, 1, 1),  # #333333
+            size_hint_y=None,
+            height=50
+        )
         layout.add_widget(self.title_label)
 
-        self.username_input = TextInput(hint_text='Логин', multiline=False)
+        # Поля ввода
+        self.username_input = TextInput(
+            hint_text='Логин',
+            multiline=False,
+            background_color=(0.878, 0.878, 0.878, 1),  # #E0E0E0
+            foreground_color=(0.2, 0.2, 0.2, 1),  # #333333
+            hint_text_color=(0.69, 0.69, 0.69, 1),  # #B0B0B0
+            padding=[10, 10],
+            size_hint_y=None,
+            height=48
+        )
         layout.add_widget(self.username_input)
 
-        self.password_input = TextInput(hint_text='Пароль', password=True, multiline=False)
+        self.password_input = TextInput(
+            hint_text='Пароль',
+            password=True,
+            multiline=False,
+            background_color=(0.878, 0.878, 0.878, 1),  # #E0E0E0
+            foreground_color=(0.2, 0.2, 0.2, 1),  # #333333
+            hint_text_color=(0.69, 0.69, 0.69, 1),  # #B0B0B0
+            padding=[10, 10],
+            size_hint_y=None,
+            height=48
+        )
         layout.add_widget(self.password_input)
 
-        self.login_button = Button(text='Войти')
+        # Кнопки
+        self.login_button = Button(
+            text='Войти',
+            background_color=(0.541, 0.169, 0.886, 1),  # #8A2BE2
+            background_normal='',
+            color=(1, 1, 1, 1),  # #FFFFFF
+            size_hint_y=None,
+            height=50,
+            font_size=18
+        )
         self.login_button.bind(on_press=self.login)
         layout.add_widget(self.login_button)
 
-        self.register_button =	Button(text='Зарегистрироваться')
+        self.register_button = Button(
+            text='Зарегистрироваться',
+            background_color=(1, 1, 1, 1),  # #FFFFFF
+            background_normal='',
+            color=(0.541, 0.169, 0.886, 1),  # #8A2BE2
+            size_hint_y=None,
+            height=50,
+            font_size=18,
+            border=(1, 1, 1, 1)  # Обводка (требует доработки в .kv)
+        )
         self.register_button.bind(on_press=self.register)
         layout.add_widget(self.register_button)
 
-        self.status_label = Label(text='', color=(1, 0, 0, 1))
+        # Статус
+        self.status_label = Label(
+            text='',
+            color=(1, 0.266, 0.266, 1),  # #FF4444
+            size_hint_y=None,
+            height=40
+        )
         layout.add_widget(self.status_label)
 
         self.add_widget(layout)
@@ -193,24 +244,37 @@ class InputScreen(Screen):
         layout = BoxLayout(orientation='vertical', padding=20, spacing=10)
 
         layout.add_widget(Label(text='Вес (кг):'))
-        self.weight_input = TextInput(multiline=False)
+        self.weight_input = TextInput(multiline=False,height=50)
         layout.add_widget(self.weight_input)
 
         layout.add_widget(Label(text='Рост (см):'))
-        self.height_input = TextInput(multiline=False)
+        self.height_input = TextInput(multiline=False,height=50)
         layout.add_widget(self.height_input)
 
         layout.add_widget(Label(text='Возраст:'))
-        self.age_input = TextInput(multiline=False)
+        self.age_input = TextInput(multiline=False,height=50)
         layout.add_widget(self.age_input)
 
         layout.add_widget(Label(text='Пол:'))
-        self.gender_spinner = Spinner(text='Выберите пол', values=('Мужской', 'Женский'))
+        self.gender_spinner = Spinner(text='Выберите пол', background_color=(0.541, 0.169, 0.886, 1),  # #8A2BE2
+            background_normal='',
+            color=(1, 1, 1, 1),  # #FFFFFF
+            size_hint_y=None,
+            height=30,
+            font_size=18,
+            values=('Мужской', 'Женский'))
         layout.add_widget(self.gender_spinner)
+
 
         layout.add_widget(Label(text='Активность:'))
         self.activity_spinner = Spinner(
             text='Выберите активность',
+            background_color=(0.541, 0.169, 0.886, 1),  # #8A2BE2
+            background_normal='',
+            color=(1, 1, 1, 1),  # #FFFFFF
+            size_hint_y=None,
+            height=30,
+            font_size=18,
             values=(
                 'Без физ нагрузки',
                 'Легкие физ нагрузки (1-3 в неделю)',
@@ -224,15 +288,33 @@ class InputScreen(Screen):
         layout.add_widget(Label(text='Цель:'))
         self.goal_spinner = Spinner(
             text='Выберите цель',
+            background_color=(0.541, 0.169, 0.886, 1),  # #8A2BE2
+            background_normal='',
+            color=(1, 1, 1, 1),  # #FFFFFF
+            size_hint_y=None,
+            height=30,
+            font_size=18,
             values=('Похудеть', 'Набрать вес', 'Поддерживать вес')
         )
         layout.add_widget(self.goal_spinner)
 
         layout.add_widget(Label(text='Питание:'))
-        self.diet_spinner = Spinner(text='Выберите питание', values=('Мясное', 'Молочное', 'Я не питаюсь'))
+        self.diet_spinner = Spinner(text='Выберите питание',
+            background_color=(0.541, 0.169, 0.886, 1),  # #8A2BE2
+            background_normal='',
+            color=(1, 1, 1, 1),  # #FFFFFF
+            size_hint_y=None,
+            height=30,
+            font_size=18, values=('Мясное', 'Молочное', 'Я не питаюсь'))
         layout.add_widget(self.diet_spinner)
 
-        self.submit_button = Button(text='Отправить')
+        self.submit_button = Button(text='Отправить',
+            background_color=(0.541, 0.169, 0.886, 1),  # #8A2BE2
+            background_normal='',
+            color=(1, 1, 1, 1),  # #FFFFFF
+            size_hint_y=None,
+            height=30,
+            font_size=18,)
         self.submit_button.bind(on_press=self.submit_data)
         layout.add_widget(self.submit_button)
 
@@ -365,22 +447,41 @@ class KbzuScreen(Screen):
         self.meals_table.add_widget(
             Label(text='Углеводы', size_hint_y=None, height=30, text_size=(60, None), halign='center', valign='middle'))
 
-        self.add_button = Button(text='Добавить прием пищи', size_hint_y=None, height=50)
+        self.add_button = Button(text='Добавить прием пищи', size_hint_y=None, height=50,
+            background_color=(0.541, 0.169, 0.886, 1),  # #8A2BE2
+            background_normal='',
+            color=(1, 1, 1, 1),  # #FFFFFF
+            font_size=18)
         self.add_button.bind(on_press=self.show_add_meal_popup)
         self.layout.add_widget(self.add_button)
 
         nav_layout = BoxLayout(size_hint_y=None, height=50)
         self.layout.add_widget(nav_layout)
 
-        kbzu_button = Button(text='КБЖУ', size_hint=(1, None), height=50)
+        kbzu_button = Button(text='КБЖУ', size_hint=(1, None), height=50,
+                             background_color=(1, 1, 1, 1),  # #FFFFFF
+                             background_normal='',
+                             color=(0.541, 0.169, 0.886, 1),  # #8A2BE2
+                             font_size=18,
+                             border=(1, 1, 1, 1))
         kbzu_button.bind(on_press=lambda x: self.switch_to('kbzu'))
         nav_layout.add_widget(kbzu_button)
 
-        water_button = Button(text='Вода', size_hint=(1, None), height=50)
+        water_button = Button(text='Вода', size_hint=(1, None), height=50,
+                              background_color=(1, 1, 1, 1),  # #FFFFFF
+                              background_normal='',
+                              color=(0.541, 0.169, 0.886, 1),  # #8A2BE2
+                              font_size=18,
+                              border=(1, 1, 1, 1))
         water_button.bind(on_press=lambda x: self.switch_to('water'))
         nav_layout.add_widget(water_button)
 
-        goal_button = Button(text='Цель', size_hint=(1, None), height=50)
+        goal_button = Button(text='Цель', size_hint=(1, None), height=50,
+                             background_color=(1, 1, 1, 1),  # #FFFFFF
+                             background_normal='',
+                             color=(0.541, 0.169, 0.886, 1),  # #8A2BE2
+                             font_size=18,
+                             border=(1, 1, 1, 1))
         goal_button.bind(on_press=lambda x: self.switch_to('goal'))
         nav_layout.add_widget(goal_button)
 
@@ -487,7 +588,7 @@ class KbzuScreen(Screen):
         content.add_widget(self.search_input)
 
         self.food_list_scroll = ScrollView(size_hint=(1, 0.5))
-        self.food_list = BoxLayout(orientation='vertical', size_hint_y=None)
+        self.food_list = BoxLayout(orientation='vertical', size_hint_y=None, )#################################################################################################################################################################
         self.food_list.bind(minimum_height=self.food_list.setter('height'))
         self.food_list_scroll.add_widget(self.food_list)
         content.add_widget(self.food_list_scroll)
@@ -495,11 +596,15 @@ class KbzuScreen(Screen):
         self.mass_input = TextInput(hint_text='Масса (г)', multiline=False, input_filter='float', size_hint_y=None, height=40)
         content.add_widget(self.mass_input)
 
-        add_btn = Button(text='Добавить', size_hint_y=None, height=50)
+        add_btn = Button(text='Добавить', size_hint_y=None, height=50,
+                         background_color=(0.541, 0.169, 0.886, 1),  # #8A2BE2
+                         background_normal='',
+                         color=(1, 1, 1, 1),  # #FFFFFF
+                         font_size=18)
         add_btn.bind(on_press=self.add_meal)
         content.add_widget(add_btn)
 
-        self.popup = Popup(title='Добавить прием пищи', content=content, size_hint=(0.8, 0.8))
+        self.popup = Popup(title='Добавить прием пищи', content=content, size_hint=(0.8, 0.8),)
         self.popup.open()
 
         self.update_food_list('')
@@ -511,7 +616,10 @@ class KbzuScreen(Screen):
         self.food_list.clear_widgets()
         filtered_foods = [food for food in food_database.keys() if search_text in food.lower()]
         for food in filtered_foods:
-            btn = Button(text=food, size_hint_y=None, height=40)
+            btn = Button(text=food, size_hint_y=None, height=40, background_color=(0.541, 0.169, 0.886, 1),  # #8A2BE2
+            background_normal='',
+            color=(1, 1, 1, 1),  # #FFFFFF
+            font_size=18)
             btn.bind(on_press=lambda instance, f=food: self.select_food(f))
             self.food_list.add_widget(btn)
 
@@ -607,11 +715,19 @@ class WaterScreen(Screen):
             btn.bind(on_release=lambda btn, f=factor, d=drink: self.show_amount_popup(f, d))
             self.drink_dropdown.add_widget(btn)
 
-        self.add_button = Button(text='+', size_hint_x=0.33)
+        self.add_button = Button(text='+', size_hint_x=0.33,
+                                 background_color=(0.541, 0.169, 0.886, 1),  # #8A2BE2
+                                 background_normal='',
+                                 color=(1, 1, 1, 1),  # #FFFFFF
+                                 font_size=18)
         self.add_button.bind(on_release=self.drink_dropdown.open)
         input_layout.add_widget(self.add_button)
 
-        self.weather_button = Button(text='☀', size_hint_x=0.33)
+        self.weather_button = Button(text='☀', size_hint_x=0.33,
+                                     background_color=(0.541, 0.169, 0.886, 1),  # #8A2BE2
+                                     background_normal='',
+                                     color=(1, 1, 1, 1),  # #FFFFFF
+                                     font_size=18)
         self.weather_dropdown = DropDown()
         weather_options = {'Жарко': 375, 'Тепло': 225, 'Комфортно': 0, 'Холодно': 150}
 
@@ -626,15 +742,30 @@ class WaterScreen(Screen):
         nav_layout = BoxLayout(size_hint_y=None, height=50)
         self.layout.add_widget(nav_layout)
 
-        kbzu_button = Button(text='КБЖУ', size_hint=(1, None), height=50)
+        kbzu_button = Button(text='КБЖУ', size_hint=(1, None), height=50,
+                             background_color=(1, 1, 1, 1),  # #FFFFFF
+                             background_normal='',
+                             color=(0.541, 0.169, 0.886, 1),  # #8A2BE2
+                             font_size=18,
+                             border=(1, 1, 1, 1))
         kbzu_button.bind(on_press=lambda x: self.switch_to('kbzu'))
         nav_layout.add_widget(kbzu_button)
 
-        water_button = Button(text='Вода', size_hint=(1, None), height=50)
+        water_button = Button(text='Вода', size_hint=(1, None), height=50,
+                              background_color=(1, 1, 1, 1),  # #FFFFFF
+                              background_normal='',
+                              color=(0.541, 0.169, 0.886, 1),  # #8A2BE2
+                              font_size=18,
+                              border=(1, 1, 1, 1))
         water_button.bind(on_press=lambda x: self.switch_to('water'))
         nav_layout.add_widget(water_button)
 
-        goal_button = Button(text='Цель', size_hint=(1, None), height=50)
+        goal_button = Button(text='Цель', size_hint=(1, None), height=50,
+                             background_color=(1, 1, 1, 1),  # #FFFFFF
+                             background_normal='',
+                             color=(0.541, 0.169, 0.886, 1),  # #8A2BE2
+                             font_size=18,
+                             border=(1, 1, 1, 1))
         goal_button.bind(on_press=lambda x: self.switch_to('goal'))
         nav_layout.add_widget(goal_button)
 
@@ -647,7 +778,11 @@ class WaterScreen(Screen):
     def show_amount_popup(self, hydration_factor, drink_name):
         content = BoxLayout(orientation='vertical', padding=10, spacing=10)
         amount_input = TextInput(hint_text='Введите объем в мл', input_filter='int', multiline=False)
-        confirm_button = Button(text='Добавить')
+        confirm_button = Button(text='Добавить',
+                                background_color=(0.541, 0.169, 0.886, 1),  # #8A2BE2
+                                    background_normal='',
+                                    color=(1, 1, 1, 1),  # #FFFFFF
+                                    font_size=18)
 
         content.add_widget(amount_input)
         content.add_widget(confirm_button)
@@ -706,7 +841,11 @@ class GoalScreen(Screen):
         self.weight_input = TextInput(hint_text='Введите текущий вес (кг)', multiline=False, size_hint_y=None, height=40)
         self.layout.add_widget(self.weight_input)
 
-        self.update_button = Button(text='Обновить вес', size_hint_y=None, height=50)
+        self.update_button = Button(text='Обновить вес', size_hint_y=None, height=50,
+                                    background_color=(0.541, 0.169, 0.886, 1),  # #8A2BE2
+                                    background_normal='',
+                                    color=(1, 1, 1, 1),  # #FFFFFF
+                                    font_size=18)
         self.update_button.bind(on_press=self.update_weight)
         self.layout.add_widget(self.update_button)
 
@@ -719,15 +858,30 @@ class GoalScreen(Screen):
         nav_layout = BoxLayout(size_hint_y=None, height=50)
         self.layout.add_widget(nav_layout)
 
-        kbzu_button = Button(text='КБЖУ', size_hint=(1, None), height=50)
+        kbzu_button = Button(text='КБЖУ', size_hint=(1, None), height=50,
+                             background_color=(1, 1, 1, 1),  # #FFFFFF
+                             background_normal='',
+                             color=(0.541, 0.169, 0.886, 1),  # #8A2BE2
+                             font_size=18,
+                             border=(1, 1, 1, 1))
         kbzu_button.bind(on_press=lambda x: self.switch_to('kbzu'))
         nav_layout.add_widget(kbzu_button)
 
-        water_button = Button(text='Вода', size_hint=(1, None), height=50)
+        water_button = Button(text='Вода', size_hint=(1, None), height=50,
+                              background_color=(1, 1, 1, 1),  # #FFFFFF
+                              background_normal='',
+                              color=(0.541, 0.169, 0.886, 1),  # #8A2BE2
+                              font_size=18,
+                              border=(1, 1, 1, 1))
         water_button.bind(on_press=lambda x: self.switch_to('water'))
         nav_layout.add_widget(water_button)
 
-        goal_button = Button(text='Цель', size_hint=(1, None), height=50)
+        goal_button = Button(text='Цель', size_hint=(1, None), height=50,
+                             background_color=(1, 1, 1, 1),  # #FFFFFF
+                             background_normal='',
+                             color=(0.541, 0.169, 0.886, 1),  # #8A2BE2
+                             font_size=18,
+                             border=(1, 1, 1, 1))
         goal_button.bind(on_press=lambda x: self.switch_to('goal'))
         nav_layout.add_widget(goal_button)
 
