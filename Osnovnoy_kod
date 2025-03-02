@@ -835,29 +835,69 @@ class GoalScreen(Screen):
         self.layout = BoxLayout(orientation='vertical', padding=20, spacing=10)
         self.add_widget(self.layout)
 
-        self.goal_label = Label(text='Ваша цель: ', font_size=20, size_hint_y=None, height=40)
-        self.layout.add_widget(self.goal_label)
+        # Добавлен выбор цели
+        self.goal_spinner = Spinner(
+            text='Выберите новую цель',
+            background_color=(0.541, 0.169, 0.886, 1),  # #8A2BE2
+            background_normal='',
+            color=(1, 1, 1, 1),  # #FFFFFF
+            font_size=18,
+            values=('Похудеть', 'Набрать вес', 'Поддерживать вес'),
+            size_hint_y=None,
+            height=40
+        )
+        self.layout.add_widget(self.goal_spinner)
 
-        self.weight_input = TextInput(hint_text='Введите текущий вес (кг)', multiline=False, size_hint_y=None, height=40)
+        self.change_goal_button = Button(
+            text='Изменить цель',
+            size_hint_y=None,
+            height=50,
+            background_color=(0.541, 0.169, 0.886, 1),  # #8A2BE2
+            background_normal='',
+            color=(1, 1, 1, 1),  # #FFFFFF
+            font_size=18
+        )
+        self.change_goal_button.bind(on_press=self.change_goal)
+        self.layout.add_widget(self.change_goal_button)
+
+        self.weight_input = TextInput(
+            hint_text='Введите текущий вес (кг)',
+            multiline=False,
+            size_hint_y=None,
+            height=40
+        )
         self.layout.add_widget(self.weight_input)
 
-        self.update_button = Button(text='Обновить вес', size_hint_y=None, height=50,
-                                    background_color=(0.541, 0.169, 0.886, 1),  # #8A2BE2
-                                    background_normal='',
-                                    color=(1, 1, 1, 1),  # #FFFFFF
-                                    font_size=18)
+        self.update_button = Button(
+            text='Обновить вес',
+            size_hint_y=None,
+            height=50,
+            background_color=(0.541, 0.169, 0.886, 1),  # #8A2BE2
+            background_normal='',
+            color=(1, 1, 1, 1),  # #FFFFFF
+            font_size=18,
+        )
         self.update_button.bind(on_press=self.update_weight)
         self.layout.add_widget(self.update_button)
 
-        self.status_label = Label(text='', color=(1, 0, 0, 1), size_hint_y=None, height=40)
+        self.status_label = Label(
+            text='',
+            color=(1, 0, 0, 1),
+            size_hint_y=None,
+            height=40
+        )
         self.layout.add_widget(self.status_label)
 
-        self.graph_image = Image(source='weight_graph.png' if os.path.exists('weight_graph.png') else '', size_hint=(1, 1))
+        self.graph_image = Image(
+            source='weight_graph.png' if os.path.exists('weight_graph.png') else '',
+            size_hint=(1, 1)
+        )
         self.layout.add_widget(self.graph_image)
 
         nav_layout = BoxLayout(size_hint_y=None, height=50)
         self.layout.add_widget(nav_layout)
 
+        # Навигация (остается без изменений)
         kbzu_button = Button(text='КБЖУ', size_hint=(1, None), height=50,
                              background_color=(1, 1, 1, 1),  # #FFFFFF
                              background_normal='',
@@ -885,20 +925,57 @@ class GoalScreen(Screen):
         goal_button.bind(on_press=lambda x: self.switch_to('goal'))
         nav_layout.add_widget(goal_button)
 
-    def update_goal(self, goal_choice):
-        if goal_choice == 1:
-            self.goal_label.text = 'Ваша цель: Похудеть'
-        elif goal_choice == 2:
-            self.goal_label.text = 'Ваша цель: Набрать вес'
-        else:
-            self.goal_label.text = 'Ваша цель: Поддерживать вес'
+    def change_goal(self, instance):
+        """Обработка изменения цели"""
+        new_goal = self.goal_spinner.text
+        goals = {'Похудеть': 1, 'Набрать вес': 2, 'Поддерживать вес': 3}
+        goal_choice = goals.get(new_goal, 3)
 
+        # Обновляем данные на сервере
+        client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        client_socket.connect(('127.0.0.1', 5555))
+
+        # Получаем текущие персональные данные
+        personal_data = self.manager.user_data.get("personal_data", {})
+        personal_data["goal_choice"] = goal_choice
+
+        # Отправляем обновленные данные
+        client_socket.send(
+            f"save_personal_data:{self.manager.username}:{self.manager.password}:{json.dumps(personal_data)}".encode(
+                'utf-8')
+        )
+        response = client_socket.recv(1024).decode('utf-8')
+        client_socket.close()
+
+        if response == "SUCCESS":
+            # Обновляем локальные данные
+            self.manager.user_data["personal_data"] = personal_data
+            self.update_goal(goal_choice)
+
+            # Обновляем экран КБЖУ
+            kbzu_screen = self.manager.get_screen('kbzu')
+            kbzu_screen.update_from_server(personal_data)
+            self.status_label.text = "Цель успешно изменена!"
+        else:
+            self.status_label.text = "Ошибка при изменении цели"
+
+    def update_goal(self, goal_choice):
+        """Обновление отображения цели"""
+        goal_texts = {
+            1: 'Похудеть',
+            2: 'Набрать вес',
+            3: 'Поддерживать вес'
+        }
+        current_goal = goal_texts.get(goal_choice, 'Поддерживать вес')
+        self.goal_spinner.text = current_goal
+        self.status_label.text = f"Текущая цель: {current_goal}"
+
+    # Остальные методы остаются без изменений
     def update_weight(self, instance):
         try:
             weight = float(self.weight_input.text)
             today = datetime.now().date().isoformat()
 
-            # Проверка на стороне клиента
             weight_history = self.manager.user_data.get("weight_history", [])
             if any(entry["date"] == today for entry in weight_history):
                 self.status_label.text = "Вы уже ввели вес сегодня!"
@@ -908,7 +985,8 @@ class GoalScreen(Screen):
             client_socket.connect(('127.0.0.1', 5555))
             weight_entry = {"date": today, "weight": weight}
             client_socket.send(
-                f"save_weight:{self.manager.username}:{self.manager.password}:{json.dumps(weight_entry)}".encode('utf-8')
+                f"save_weight:{self.manager.username}:{self.manager.password}:{json.dumps(weight_entry)}".encode(
+                    'utf-8')
             )
             response = client_socket.recv(1024).decode('utf-8')
             client_socket.close()
@@ -944,7 +1022,8 @@ class GoalScreen(Screen):
 
     def on_enter(self):
         if self.manager.user_data.get("personal_data"):
-            self.update_goal(self.manager.user_data["personal_data"].get("goal_choice", 3))
+            goal_choice = self.manager.user_data["personal_data"].get("goal_choice", 3)
+            self.update_goal(goal_choice)
             self.update_progress(self.manager.user_data.get("weight_history", []))
         self.status_label.text = ""
 
